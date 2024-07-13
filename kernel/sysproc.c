@@ -102,6 +102,7 @@ sys_map_shared_pages(void)
   argaddr(2, &src_va);
   argaddr(3, &size);
 
+  // Acquire locks in order of pid to avoid deadlock
   if (src_pid > dst_pid) {
     src_proc = find_proc(src_pid);
     if (src_proc == 0) {

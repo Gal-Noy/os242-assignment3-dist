@@ -33,12 +33,12 @@ int main(void)
 
     if (pid == 0) // Child process
     {
-        char *child_shmem;
+        uint64 child_va;
 
         print_size("Child: initial size");
 
         // Share the memory with the parent process
-        if ((child_shmem = (char *)map_shared_pages(ppid, getpid(), (uint64)shmem, PGSIZE)) < 0)
+        if ((child_va = map_shared_pages(ppid, getpid(), (uint64)shmem, PGSIZE)) < 0)
         {
             printf("map_shared_pages failed\n");
             exit(1);
@@ -46,10 +46,10 @@ int main(void)
         print_size("Child: size after mapping shared memory");
 
         // Write the string to the shared memory
-        strcpy(child_shmem, "Hello daddy");
+        strcpy((char *)child_va, "Hello daddy");
 
         // Unmap the shared memory
-        if (unmap_shared_pages(getpid(), (uint64)child_shmem, PGSIZE) < 0)
+        if (unmap_shared_pages(getpid(), child_va, PGSIZE) < 0)
         {
             printf("unmap_shared_pages failed\n");
             exit(1);
@@ -57,7 +57,7 @@ int main(void)
         print_size("Child: size after unmapping shared memory");
 
         // Allocate memory using malloc()
-        if (malloc(20 * PGSIZE) == 0)
+        if (malloc(PGSIZE) == 0)
         {
             printf("malloc failed\n");
             exit(1);
@@ -72,6 +72,9 @@ int main(void)
 
         // Read and print the string from shared memory
         printf("Parent reads: %s\n", shmem);
+
+        // Free the shared memory
+        free(shmem);
     }
 
     exit(0);

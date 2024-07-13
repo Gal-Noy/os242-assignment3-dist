@@ -42,6 +42,7 @@ int main(void)
         }
 
         wait(0);
+        free(shmem);
     }
 
     exit(0);
