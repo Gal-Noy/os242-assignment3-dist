@@ -688,3 +688,67 @@ procdump(void)
     printf("\n");
   }
 }
+
+uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
+  uint64 page;
+  uint64 offset = src_va - PGROUNDDOWN(src_va); // Offset of the first page in the source process's memory
+  uint64 dst_va = PGROUNDUP(dst_proc->sz); // Mapping starts at the end of the destination process's memory
+  pte_t *src_pte;
+  int allocated_pages = 0;
+
+  for (page = PGROUNDDOWN(src_va); page < PGROUNDUP(src_va + size); page += PGSIZE) {
+    src_pte = walk(src_proc->pagetable, page, 0); // Get the PTE of the source page
+    if (src_pte == 0 || !(PTE_FLAGS(*src_pte) & PTE_V)) { // The source page is not mapped or not valid
+      unmap_shared_pages(dst_proc, dst_va, allocated_pages * PGSIZE);
+      return -1;
+    }
+
+    if (mappages(dst_proc->pagetable, dst_va, PGSIZE, PTE2PA(*src_pte), PTE_FLAGS(*src_pte) | PTE_S) < 0) { // Map the source page to the destination process
+      unmap_shared_pages(dst_proc, dst_va, allocated_pages * PGSIZE); // In case of an error, unmap the shared pages
+      return -1;
+    }
+
+    dst_va += PGSIZE; // Move to the next page
+    allocated_pages++;
+  }
+
+  dst_proc->sz += allocated_pages * PGSIZE; // Update the destination process's size
+
+  // Return the address of the first page in the destination process's memory
+  return PGROUNDUP(dst_proc->sz) - allocated_pages * PGSIZE + offset; 
+}
+
+uint64 unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
+  uint64 page;
+
+  if (p->sz < size) { // Trying to unmap more memory than the process has
+    return -1;
+  }
+
+  // Validate that all the pages are shared
+  for (page = PGROUNDDOWN(addr); page < PGROUNDUP(addr + size); page += PGSIZE) {
+    pte_t *pte = walk(p->pagetable, page, 0); // Get the PTE of the page
+    if (pte == 0 || !(PTE_FLAGS(*pte) & PTE_S)) { // The page is not mapped or not shared
+      return -1;
+    }
+  }
+
+  uvmunmap(p->pagetable, PGROUNDDOWN(addr), size / PGSIZE, 0); // Unmap the shared pages
+  p->sz -= size; // Update the process's size
+
+  return 0;
+}
+
+
+struct proc* find_proc(int pid) {
+  struct proc* p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if (p->pid == pid) {
+      release(&p->lock);
+      return p;
+    }
+    release(&p->lock);
+  }
+  return 0;
+}
