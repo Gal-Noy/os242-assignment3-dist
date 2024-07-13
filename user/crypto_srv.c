@@ -8,17 +8,65 @@
 
 #include "kernel/crypto.h"
 
-int main(void) {
-  if(open("console", O_RDWR) < 0){
+int main(void)
+{
+  if (open("console", O_RDWR) < 0)
+  {
     mknod("console", CONSOLE, 0);
     open("console", O_RDWR);
   }
-  dup(0);  // stdout
-  dup(0);  // stderr
+  dup(0); // stdout
+  dup(0); // stderr
 
   printf("crypto_srv: starting\n");
 
   // TODO: implement the cryptographic server here
+  if (getpid() != 2)
+  {
+    fprintf(2, "crypto_srv: must be started by init\n");
+    exit(1);
+  }
+
+  struct crypto_op *op;
+  void *addr;
+  uint64 size;
+
+  for (;;)
+  {
+    if (take_shared_memory_request(&addr, &size) < 0)
+    {
+      continue;
+    }
+
+    op = (struct crypto_op *)addr;
+
+    // Check if the operation is valid
+    if (op->state != CRYPTO_OP_STATE_INIT)
+    {
+      op->state = CRYPTO_OP_STATE_ERROR;
+    }
+    else
+    {
+      // Decrypt or Encrypt the payload
+      for (int i = 0; i < op->data_size; i++)
+      {
+        op->payload[i + op->key_size] ^= op->payload[i % op->key_size];
+      }
+
+      // Memory barrier (fence) to ensure that the data is written back to memory before setting the state to done
+      asm volatile("fence rw,rw" : : : "memory"); 
+
+      // Set the state to done
+      op->state = CRYPTO_OP_STATE_DONE;
+    }
+
+    memcpy(addr, op, sizeof(struct crypto_op));
+    if (remove_shared_memory_request(addr, size) < 0)
+    {
+      fprintf(2, "crypto_srv: failed to remove shared memory request\n");
+      exit(1);
+    }
+  }
 
   exit(0);
 }
