@@ -745,7 +745,6 @@ struct proc* find_proc(int pid) {
   for (p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if (p->pid == pid) {
-      release(&p->lock);
       return p;
     }
     release(&p->lock);
