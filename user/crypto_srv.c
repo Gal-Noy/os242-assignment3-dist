@@ -46,14 +46,13 @@ int main(void)
     // Check if the operation is valid
     if (op->state != CRYPTO_OP_STATE_INIT ||                                                                              // Check if the state is initialized
         (op->type != CRYPTO_OP_TYPE_ENCRYPT && op->type != CRYPTO_OP_TYPE_DECRYPT) ||                                     // Check if the type is valid
-        op->data_size > REASONABLE_DATA_SIZE || op->data_size <= 0 || op->data_size > size - sizeof(struct crypto_op) || // Check if the data size is valid
-        op->key_size > REASONABLE_KEY_SIZE)                                                                               // Check if the key size is valid
+        op->data_size > REASONABLE_DATA_SIZE || op->data_size <= 0 || op->data_size > size - sizeof(struct crypto_op) ||  // Check if the data size is valid
+        op->key_size < 0 || op->key_size > REASONABLE_KEY_SIZE)                                                           // Check if the key size is valid
     {
       op->state = CRYPTO_OP_STATE_ERROR;
     }
     else
     {
-
       if (op->key_size > 0)
       {
         // Decrypt or Encrypt the payload
