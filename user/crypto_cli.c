@@ -30,7 +30,7 @@ int main (void) {
   memcpy(op->payload + key_size, message, data_size);
 
   crypto_op(op, op_size);
-
+  
   volatile enum crypto_op_state* op_state = &op->state;
   while (*op_state == CRYPTO_OP_STATE_INIT)
     ;
