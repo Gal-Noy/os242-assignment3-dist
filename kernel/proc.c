@@ -700,12 +700,12 @@ uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src
     src_pte = walk(src_proc->pagetable, page, 0); // Get the PTE of the source page
     if (src_pte == 0 || !(PTE_FLAGS(*src_pte) & PTE_V)) { // The source page is not mapped or not valid
       unmap_shared_pages(dst_proc, dst_va, allocated_pages * PGSIZE);
-      return -1;
+      return 0;
     }
 
     if (mappages(dst_proc->pagetable, dst_va, PGSIZE, PTE2PA(*src_pte), PTE_FLAGS(*src_pte) | PTE_S) < 0) { // Map the source page to the destination process
       unmap_shared_pages(dst_proc, dst_va, allocated_pages * PGSIZE); // In case of an error, unmap the shared pages
-      return -1;
+      return 0;
     }
 
     dst_va += PGSIZE; // Move to the next page
