@@ -742,7 +742,6 @@ uint64 map_shared_pages(struct proc *src_proc, struct proc *dst_proc, uint64 src
 uint64 unmap_shared_pages(struct proc *p, uint64 addr, uint64 size)
 {
   uint64 page;
-  int unmapped_pages = 0;
 
   // Validate the address and size
   if (p->sz - addr < size)
@@ -754,15 +753,16 @@ uint64 unmap_shared_pages(struct proc *p, uint64 addr, uint64 size)
   for (page = PGROUNDDOWN(addr); page < PGROUNDUP(addr + size); page += PGSIZE)
   {
     pte_t *pte = walk(p->pagetable, page, 0); // Get the PTE of the page
+
     if (pte == 0 || !(PTE_FLAGS(*pte) & PTE_S))
     { // The page is not mapped or not shared
       return -1;
     }
-    unmapped_pages++;
+
+    uvmunmap(p->pagetable, page, 1, 0); // Unmap the shared page
   }
 
-  uvmunmap(p->pagetable, PGROUNDDOWN(addr), (size + PGSIZE - 1) / PGSIZE, 0);   // Unmap the shared pages
-  p->sz -= unmapped_pages * PGSIZE;                                             // Update the process's size
+  p->sz = PGROUNDDOWN(p->sz - size);    // Update the process's size
 
   return 0;
 }
