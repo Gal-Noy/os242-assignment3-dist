@@ -14,20 +14,18 @@ int main(void)
     char *shmem;
     int pid, ppid = getpid();
 
-    print_size("Parent: initial size");
-
     // Allocate one page of memory using malloc
     if ((shmem = malloc(PGSIZE)) == 0)
     {
         printf("malloc failed\n");
         exit(1);
     }
-    print_size("Parent: size after allocating shared memory");
 
     pid = fork();
     if (pid < 0)
     {
         printf("fork failed\n");
+        free(shmem);
         exit(1);
     }
 
