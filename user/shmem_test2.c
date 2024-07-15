@@ -47,7 +47,7 @@ int main(void)
         strcpy((char *)child_va, "Hello daddy");
 
         // Unmap the shared memory
-        if (unmap_shared_pages(getpid(), child_va, PGSIZE) < 0)
+        if (unmap_shared_pages(child_va, PGSIZE) < 0)
         {
             printf("unmap_shared_pages failed\n");
             exit(1);

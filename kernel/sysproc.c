@@ -137,21 +137,10 @@ sys_map_shared_pages(void)
 uint64
 sys_unmap_shared_pages(void)
 {
-  int pid, ret;
   uint64 addr, size;
-  struct proc *p;
 
-  argint(0, &pid);
   argaddr(0, &addr);
   argaddr(1, &size);
 
-  p = find_proc(pid);
-  if (p == 0) {
-    return -1;
-  }
-
-  ret = unmap_shared_pages(p, addr, size);
-
-  release(&p->lock);
-  return ret;
+  return unmap_shared_pages(myproc(), addr, size);
 }
