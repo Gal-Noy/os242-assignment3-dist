@@ -6,23 +6,24 @@
 
 int main(void)
 {
-    char *shmem;
+    char *shmem, *msg = "Hello child";
     int pid;
 
     // Allocate a page of memory
-    if ((shmem = malloc(PGSIZE)) == 0)
+    if ((shmem = malloc(sizeof(msg))) == 0)
     {
         printf("malloc failed\n");
         exit(1);
     }
 
     // Write the string to the shared memory
-    strcpy(shmem, "Hello child");
+    strcpy(shmem, msg);
 
     pid = fork();
     if (pid < 0)
     {
         printf("fork failed\n");
+        free(shmem);
         exit(1);
     }
 
@@ -35,9 +36,10 @@ int main(void)
     else // Parent process
     {
         // Share the memory with the child process
-        if (map_shared_pages(getpid(), pid, (uint64)shmem, PGSIZE) < 0)
+        if (map_shared_pages(getpid(), pid, (uint64)shmem, sizeof(msg)) < 0)
         {
             printf("map_shared_pages failed\n");
+            free(shmem);
             exit(1);
         }
 
